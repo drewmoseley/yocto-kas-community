@@ -1,0 +1,7 @@
+# Kas checkouts and build output live outside the repo; keep stray ones out of it
+build/
+sources/
+layers/
+poky/
+*.log
+.scratch/*/tmp/
