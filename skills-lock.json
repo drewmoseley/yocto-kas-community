@@ -22,6 +22,13 @@
       "computedHash": "b6371a0a6723bad551f3adc721e3729a6a97acfc3670dc2bdea198bbe78408c0",
       "installMode": "copy"
     },
+    "setup-matt-pocock-skills": {
+      "source": "mattpocock/skills",
+      "sourceType": "github",
+      "skillPath": "skills/engineering/setup-matt-pocock-skills/SKILL.md",
+      "computedHash": "50d6c45174f56a4323b24978f36fcc9169fae0b3abb026587bf636e468c4954c",
+      "installMode": "copy"
+    },
     "tdd": {
       "source": "mattpocock/skills",
       "sourceType": "github",
