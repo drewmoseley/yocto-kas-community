@@ -5,3 +5,6 @@ layers/
 poky/
 *.log
 .scratch/*/tmp/
+
+# kas lockfiles: generated to reproduce a failure, committed only deliberately
+*.lock.yml

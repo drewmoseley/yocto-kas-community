@@ -1,0 +1,20 @@
+# Wrynose (Yocto 6.0 LTS). Layers track their wrynose branches.
+header:
+  version: 14
+  includes:
+    - repo: this
+      file: kas/base.yml
+
+repos:
+  this:
+    layers:
+      .: disabled
+
+  bitbake:
+    branch: "2.18"
+
+  openembedded-core:
+    branch: wrynose
+
+  meta-openembedded:
+    branch: wrynose

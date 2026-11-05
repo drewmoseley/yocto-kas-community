@@ -1,0 +1,34 @@
+# Settings shared by every release. Release files include this and pin branches.
+header:
+  version: 14
+
+# MACHINE is overridden per target with the KAS_MACHINE environment variable.
+machine: qemux86-64
+distro: nodistro
+target: core-image-full-cmdline
+
+# Host-specific cache locations come from the environment (see local.env.example);
+# nothing host-specific is committed here.
+env:
+  DL_DIR: ""
+  SSTATE_DIR: ""
+
+repos:
+  this:
+    layers:
+      .: disabled
+
+  bitbake:
+    url: https://git.openembedded.org/bitbake
+    layers:
+      .: disabled
+
+  openembedded-core:
+    url: https://git.openembedded.org/openembedded-core
+    layers:
+      meta:
+
+  meta-openembedded:
+    url: https://git.openembedded.org/meta-openembedded
+    layers:
+      meta-oe:
