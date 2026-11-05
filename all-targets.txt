@@ -1,0 +1,13 @@
+pocketbeagle2
+beaglebone
+beagleplay
+intel-corei7-64
+qemuarm64
+qemux86-64
+qemuriscv64
+raspberrypi0
+raspberrypi0-wifi
+raspberrypi0-2w-64
+raspberrypi4-64
+milkv-duo
+orange-pi-zero
