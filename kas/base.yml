@@ -13,6 +13,12 @@ env:
   DL_DIR: ""
   SSTATE_DIR: ""
 
+# sstate is shared across builds, so the hash equivalence database must be shared
+# too (otherwise BitBake warns and sstate reuse suffers).
+local_conf_header:
+  hashserv: |
+    BB_HASHSERVE_DB_DIR = "${SSTATE_DIR}"
+
 repos:
   this:
     layers:
