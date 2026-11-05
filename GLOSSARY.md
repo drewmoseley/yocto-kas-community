@@ -19,3 +19,7 @@ _Avoid_: Manifest, recipe
 **Base config**:
 The kas file holding settings shared by every release's kas file, which they include.
 _Avoid_: Common file, template
+
+**Overlay**:
+A kas file that adds the vendor layers for one family of targets, such as meta-ti or meta-raspberrypi. The driver includes it only when building a target in that family.
+_Avoid_: BSP file, machine file
