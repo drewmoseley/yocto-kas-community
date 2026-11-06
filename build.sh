@@ -33,13 +33,27 @@ while read -r machine overlay _; do
     fi
     cfg="kas/$release.yml"
     [ "$overlay" != "-" ] && cfg="$cfg:kas/overlays/$overlay.yml"
-    KAS_MACHINE="$machine" kas build "$cfg" 2>&1 | tee "$logdir/$machine.log"
-    if [ "${PIPESTATUS[0]}" -eq 0 ]; then
-        summary+="PASS  $machine"$'\n'
-    else
+    log="$logdir/$machine.log"
+    # The image under test must be built with the testimage overlay (login features).
+    case "$machine" in qemu*) cfg="$cfg:kas/testimage.yml";; esac
+    KAS_MACHINE="$machine" kas build "$cfg" 2>&1 | tee "$log"
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
         failed=1
-        summary+="FAIL  $machine  $logdir/$machine.log"$'\n'
+        summary+="FAIL  $machine  build  $log"$'\n'
+        continue
     fi
+    # Boot-test QEMU targets only; hardware targets cannot be booted here.
+    case "$machine" in
+    qemu*)
+        KAS_MACHINE="$machine" kas build --task testimage "$cfg" 2>&1 | tee -a "$log"
+        if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+            failed=1
+            summary+="FAIL  $machine  boot-test  $log"$'\n'
+            continue
+        fi
+        ;;
+    esac
+    summary+="PASS  $machine"$'\n'
 done < all-targets.txt
 echo; echo "== Summary =="; printf "%s" "$summary"
 exit "$failed"

@@ -16,11 +16,15 @@ setup() {
 #!/bin/bash
 echo "$KAS_MACHINE $*" >> "$STUB_CALLS"
 echo "stub kas output for $KAS_MACHINE"
+case "$*" in *"--task testimage"*)
+    case " ${STUB_FAIL_TEST:-} " in *" $KAS_MACHINE "*) echo "stub boot failure" >&2; exit 1;; esac
+    exit 0;;
+esac
 case " ${STUB_FAIL:-} " in *" $KAS_MACHINE "*) echo "stub failure" >&2; exit 1;; esac
 STUB
     chmod +x "$T/bin/kas"
     export STUB_CALLS="$T/kas.calls"; : > "$STUB_CALLS"
-    unset STUB_FAIL
+    unset STUB_FAIL STUB_FAIL_TEST
     export PATH="$T/bin:$ORIG_PATH"
 }
 ORIG_PATH="$PATH"
@@ -97,6 +101,32 @@ test_bad_arguments() {
     expect "args: unknown target runs no kas, even for valid ones" calls_equal ""
 }
 
+qemu_setup() {
+    setup
+    : > "$T/kas/testimage.yml"
+    printf 'qemua -\nhw ov\nqemub -\n' > "$T/all-targets.txt"
+}
+
+test_boot_test_qemu_only() {
+    qemu_setup; run fake
+    expect "boot: QEMU targets build with the testimage overlay then run testimage; hardware does neither" calls_equal \
+"qemua build kas/fake.yml:kas/testimage.yml
+qemua build --task testimage kas/fake.yml:kas/testimage.yml
+hw build kas/fake.yml:kas/overlays/ov.yml
+qemub build kas/fake.yml:kas/testimage.yml
+qemub build --task testimage kas/fake.yml:kas/testimage.yml"
+    expect "boot: all passing exits 0" [ "$RC" -eq 0 ]
+}
+
+test_boot_failure_distinct() {
+    qemu_setup; STUB_FAIL_TEST="qemua" run fake
+    expect "boot: failure exits 1" [ "$RC" -eq 1 ]
+    expect "boot: summary says boot-test failure" grep -qE '^FAIL +qemua +boot-test' <<<"$OUT"
+    setup; qemu_setup; STUB_FAIL="qemub" run fake
+    expect "boot: build failure labelled build, no testimage run" grep -qE '^FAIL +qemub +build' <<<"$OUT"
+    expect "boot: build failure skips testimage" bash -c '! grep -q "qemub build --task" "$STUB_CALLS"'
+}
+
 test_default_builds_all_targets
 test_named_targets_only
 test_failure_continues_and_exits_nonzero
@@ -105,6 +135,8 @@ test_summary
 test_missing_local_env
 test_missing_variable
 test_bad_arguments
+test_boot_test_qemu_only
+test_boot_failure_distinct
 
 echo "$pass passed, $fail failed"
 [ "$fail" -eq 0 ]

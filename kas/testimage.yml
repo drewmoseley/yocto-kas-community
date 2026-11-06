@@ -1,0 +1,14 @@
+header:
+  version: 14
+
+# Boot-test overlay: configures the image and OE-core's testimage for QEMU.
+# The driver adds this for qemu* targets only, to both the build and the
+# `kas build --task testimage` step (the image under test needs the login
+# features below).
+local_conf_header:
+  testimage: |
+    IMAGE_CLASSES += "testimage"
+    EXTRA_IMAGE_FEATURES += "allow-empty-password empty-root-password allow-root-login"
+    TEST_TARGET = "qemu"
+    TEST_SUITES = "ping ssh"
+    TEST_RUNQEMUPARAMS = "slirp nographic"
