@@ -1,13 +1,14 @@
-pocketbeagle2
-beaglebone
-beagleplay
-intel-corei7-64
-qemuarm64
-qemux86-64
-qemuriscv64
-raspberrypi0
-raspberrypi0-wifi
-raspberrypi0-2w-64
-raspberrypi4-64
-milkv-duo
-orange-pi-zero
+# machine            overlay   ('-' = no overlay)
+pocketbeagle2        ti
+beaglebone           ti
+beagleplay           ti
+intel-corei7-64      intel
+qemuarm64            -
+qemux86-64           -
+qemuriscv64          -
+raspberrypi0         raspberrypi
+raspberrypi0-wifi    raspberrypi
+raspberrypi0-2w-64   raspberrypi
+raspberrypi4-64      raspberrypi
+milkv-duo            riscv
+orange-pi-zero       sunxi

@@ -8,3 +8,4 @@ poky/
 
 # kas lockfiles: generated to reproduce a failure, committed only deliberately
 *.lock.yml
+local.env
