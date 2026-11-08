@@ -15,6 +15,7 @@ setup() {
     cat > "$T/bin/kas" <<'STUB'
 #!/bin/bash
 echo "$KAS_MACHINE $*" >> "$STUB_CALLS"
+echo "$KAS_MACHINE threads=${BB_NUMBER_THREADS:-} make=${PARALLEL_MAKE:-}" >> "$STUB_ENV"
 [ -n "${STUB_READ_STDIN:-}" ] && cat > /dev/null
 echo "stub kas output for $KAS_MACHINE"
 case "$*" in *"--task testimage"*)
@@ -24,7 +25,7 @@ esac
 case " ${STUB_FAIL:-} " in *" $KAS_MACHINE "*) echo "stub failure" >&2; exit 1;; esac
 STUB
     chmod +x "$T/bin/kas"
-    export STUB_CALLS="$T/kas.calls"; : > "$STUB_CALLS"
+    export STUB_CALLS="$T/kas.calls" STUB_ENV="$T/kas.env"; : > "$STUB_CALLS"; : > "$STUB_ENV"
     unset STUB_FAIL STUB_FAIL_TEST
     export PATH="$T/bin:$ORIG_PATH"
 }
@@ -136,6 +137,17 @@ m2 build kas/fake.yml
 m3 build kas/fake.yml"
 }
 
+test_parallelism_cap_from_local_env() {
+    setup; printf 'BB_NUMBER_THREADS=12\nPARALLEL_MAKE=-j8\n' >> "$T/local.env"; run fake m2
+    expect "parallelism: caps from local.env reach kas" [ "$(cat "$STUB_ENV")" = "m2 threads=12 make=-j8" ]
+}
+
+test_parallelism_defaults_to_cpu_count() {
+    setup; run fake m2
+    local n; n=$(nproc)
+    expect "parallelism: unset in local.env defaults to the CPU count" [ "$(cat "$STUB_ENV")" = "m2 threads=$n make=-j$n" ]
+}
+
 test_default_builds_all_targets
 test_named_targets_only
 test_failure_continues_and_exits_nonzero
@@ -147,6 +159,8 @@ test_bad_arguments
 test_boot_test_qemu_only
 test_boot_failure_distinct
 test_kas_reading_stdin_does_not_eat_targets
+test_parallelism_cap_from_local_env
+test_parallelism_defaults_to_cpu_count
 
 echo "$pass passed, $fail failed"
 [ "$fail" -eq 0 ]

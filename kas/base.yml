@@ -12,6 +12,10 @@ target: core-image-full-cmdline
 env:
   DL_DIR: ""
   SSTATE_DIR: ""
+  # Always exported by build.sh. Empty here means: when running kas directly,
+  # set both yourself (empty values reach bitbake as empty).
+  BB_NUMBER_THREADS: ""
+  PARALLEL_MAKE: ""
 
 # sstate is shared across builds, so the hash equivalence database must be shared
 # too (otherwise BitBake warns and sstate reuse suffers).

@@ -19,7 +19,11 @@ for t in "$@"; do
     grep -qE "^$t([[:space:]]|\$)" all-targets.txt || die "unknown target '$t' (not in all-targets.txt)"
 done
 
-export DL_DIR SSTATE_DIR
+# Optional caps in local.env (e.g. on a host with flaky RAM); default to the CPU count.
+BB_NUMBER_THREADS="${BB_NUMBER_THREADS:-$(nproc)}"
+PARALLEL_MAKE="${PARALLEL_MAKE:--j$(nproc)}"
+
+export DL_DIR SSTATE_DIR BB_NUMBER_THREADS PARALLEL_MAKE
 export KAS_WORK_DIR="$WORK_ROOT/$release"
 logdir="$KAS_WORK_DIR/logs/$(date +%Y%m%d-%H%M%S)"
 mkdir -p "$logdir"
