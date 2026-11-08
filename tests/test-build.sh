@@ -15,6 +15,7 @@ setup() {
     cat > "$T/bin/kas" <<'STUB'
 #!/bin/bash
 echo "$KAS_MACHINE $*" >> "$STUB_CALLS"
+[ -n "${STUB_READ_STDIN:-}" ] && cat > /dev/null
 echo "stub kas output for $KAS_MACHINE"
 case "$*" in *"--task testimage"*)
     case " ${STUB_FAIL_TEST:-} " in *" $KAS_MACHINE "*) echo "stub boot failure" >&2; exit 1;; esac
@@ -29,7 +30,7 @@ STUB
 }
 ORIG_PATH="$PATH"
 
-run() { OUT=$("$T/build.sh" "$@" 2>&1); RC=$?; }
+run() { OUT=$("$T/build.sh" "$@" 2>&1 </dev/null); RC=$?; }
 
 expect() {  # expect <description> <condition...>
     local desc="$1"; shift
@@ -127,6 +128,14 @@ test_boot_failure_distinct() {
     expect "boot: build failure skips testimage" bash -c '! grep -q "qemub build --task" "$STUB_CALLS"'
 }
 
+test_kas_reading_stdin_does_not_eat_targets() {
+    setup; STUB_READ_STDIN=1 run fake
+    expect "stdin: a kas that reads stdin does not swallow the remaining targets" calls_equal \
+"m1 build kas/fake.yml:kas/overlays/ov.yml
+m2 build kas/fake.yml
+m3 build kas/fake.yml"
+}
+
 test_default_builds_all_targets
 test_named_targets_only
 test_failure_continues_and_exits_nonzero
@@ -137,6 +146,7 @@ test_missing_variable
 test_bad_arguments
 test_boot_test_qemu_only
 test_boot_failure_distinct
+test_kas_reading_stdin_does_not_eat_targets
 
 echo "$pass passed, $fail failed"
 [ "$fail" -eq 0 ]

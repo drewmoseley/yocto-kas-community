@@ -26,7 +26,7 @@ mkdir -p "$logdir"
 failed=0
 summary=""
 
-while read -r machine overlay _; do
+while read -r machine overlay _ <&3; do
     case "$machine" in ''|'#'*) continue;; esac
     if [ $# -gt 0 ]; then
         case " $* " in *" $machine "*) ;; *) continue;; esac
@@ -54,6 +54,6 @@ while read -r machine overlay _; do
         ;;
     esac
     summary+="PASS  $machine"$'\n'
-done < all-targets.txt
+done 3< all-targets.txt
 echo; echo "== Summary =="; printf "%s" "$summary"
 exit "$failed"
