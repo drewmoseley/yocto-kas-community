@@ -1,0 +1,17 @@
+# Raspberry Pi targets: adds meta-raspberrypi and the meta-openembedded
+# sublayers it depends on. Only the driver adds this, for raspberrypi* targets.
+header:
+  version: 14
+
+repos:
+  meta-openembedded:
+    layers:
+      meta-python:
+      meta-networking:
+      meta-multimedia:
+
+  meta-raspberrypi:
+    url: https://git.yoctoproject.org/meta-raspberrypi
+    branch: wrynose
+    layers:
+      .:
