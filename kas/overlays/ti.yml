@@ -1,0 +1,19 @@
+# TI and Beagle targets: adds meta-ti (meta-ti-bsp, meta-beagle) and meta-arm (+ toolchain),
+# which meta-ti-bsp depends on. Only the driver adds this, for these targets.
+header:
+  version: 14
+
+repos:
+  meta-arm:
+    url: https://git.yoctoproject.org/meta-arm
+    branch: wrynose
+    layers:
+      meta-arm:
+      meta-arm-toolchain:
+
+  meta-ti:
+    url: https://git.yoctoproject.org/meta-ti
+    branch: wrynose
+    layers:
+      meta-ti-bsp:
+      meta-beagle:
