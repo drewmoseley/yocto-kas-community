@@ -1,0 +1,18 @@
+diff --git a/recipes-kernel/linux/linux-milkv-duo-dev.bb b/recipes-kernel/linux/linux-milkv-duo-dev.bb
+index f21e259..11c85f7 100644
+--- a/recipes-kernel/linux/linux-milkv-duo-dev.bb
++++ b/recipes-kernel/linux/linux-milkv-duo-dev.bb
+@@ -21,6 +21,13 @@ LINUX_VERSION ?= "5.10.4"
+ LINUX_VERSION_EXTENSION:append:milkv-duo = "-milkv-duo"
+ KERNEL_VERSION_SANITY_SKIP = "1"
+ 
++# The vendor kernel has no kernel-cache, and binutils 2.46 rejects the legacy
++# sptbr CSR name (satp is the same register).
++KERNEL_FEATURES_RISCV = ""
++do_patch:append() {
++    sed -i "s/csr_write(sptbr,/csr_write(satp,/" ${S}/arch/riscv/mm/context.c
++}
++
+ KERNEL_DEVICETREE ?= "cvitek/cv1800b_milkv_duo_sd.dtb"
+ SDIR = "${B}/arch/riscv/boot"
+ 

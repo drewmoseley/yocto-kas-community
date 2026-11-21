@@ -1,0 +1,16 @@
+# RISC-V targets: adds meta-riscv, which only depends on OE-Core and bitbake.
+# Only the driver adds this, for the milkv-duo target.
+header:
+  version: 14
+
+repos:
+  meta-riscv:
+    url: https://github.com/riscv/meta-riscv
+    branch: wrynose
+    layers:
+      .:
+    patches:
+      milkv-duo-dev-kernel:
+        repo: this
+        path: kas/patches/meta-riscv-milkv-duo-dev.patch
+
