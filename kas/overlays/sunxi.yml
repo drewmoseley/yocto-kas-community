@@ -1,0 +1,27 @@
+# Allwinner sunxi targets: adds meta-sunxi plus its dependencies meta-python
+# (meta-openembedded) and meta-arm. meta-sunxi has no wrynose branch, so this
+# intentionally tracks master; a kas patch adds wrynose to its layer compat.
+header:
+  version: 14
+
+repos:
+  meta-openembedded:
+    layers:
+      meta-python:
+
+  meta-arm:
+    url: https://git.yoctoproject.org/meta-arm
+    branch: wrynose
+    layers:
+      meta-arm:
+      meta-arm-toolchain:
+
+  meta-sunxi:
+    url: https://github.com/linux-sunxi/meta-sunxi
+    branch: master
+    layers:
+      .:
+    patches:
+      layer-compat:
+        repo: this
+        path: kas/patches/meta-sunxi-layer-compat.patch
