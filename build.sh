@@ -46,6 +46,17 @@ while read -r machine overlay _ <&3; do
         summary+="FAIL  $machine  build  $log"$'\n'
         continue
     fi
+    # Record the exact layer revisions next to this machine's images.
+    manifest="$KAS_WORK_DIR/build/tmp/deploy/images/$machine/build-manifest.json"
+    dump="$(mktemp)"
+    if ! KAS_MACHINE="$machine" kas dump --resolve-refs --resolve-local --format json "$cfg" >"$dump" 2>>"$log" \
+        || ! python3 "$here/scripts/build-manifest.py" "$release" "$machine" "$manifest" <"$dump" >>"$log" 2>&1; then
+        rm -f "$dump"
+        failed=1
+        summary+="FAIL  $machine  manifest  $log"$'\n'
+        continue
+    fi
+    rm -f "$dump"
     # Boot-test QEMU targets only; hardware targets cannot be booted here.
     case "$machine" in
     qemu*)

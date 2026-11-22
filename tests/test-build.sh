@@ -9,11 +9,19 @@ setup() {
     T=$(mktemp -d)
     mkdir -p "$T/kas/overlays" "$T/bin" "$T/work"
     cp "$REPO/build.sh" "$T/build.sh" 2>/dev/null
+    mkdir -p "$T/scripts"; cp "$REPO/scripts/build-manifest.py" "$T/scripts/" 2>/dev/null
     : > "$T/kas/fake.yml"; : > "$T/kas/overlays/ov.yml"
     printf 'DL_DIR=%s/dl\nSSTATE_DIR=%s/ss\nWORK_ROOT=%s/work\n' "$T" "$T" "$T" > "$T/local.env"
     printf '# machine overlay\n\nm1 ov\nm2 -\nm3 -\n' > "$T/all-targets.txt"
     cat > "$T/bin/kas" <<'STUB'
 #!/bin/bash
+if [ "$1" = dump ]; then
+    echo "$KAS_MACHINE $*" >> "$STUB_DUMPS"
+    case " ${STUB_FAIL_DUMP:-} " in *" $KAS_MACHINE "*) echo "stub dump failure" >&2; exit 1;; esac
+    echo '{"target":"stub-image","repos":{"this":{"url":"u","commit":"c0"},"poky":{"url":"p","branch":"br","commit":"c1"},"unpinned":{"url":"q"}}}'
+    exit 0
+fi
+mkdir -p "$KAS_WORK_DIR/build/tmp/deploy/images/$KAS_MACHINE"
 echo "$KAS_MACHINE $*" >> "$STUB_CALLS"
 echo "$KAS_MACHINE threads=${BB_NUMBER_THREADS:-} make=${PARALLEL_MAKE:-}" >> "$STUB_ENV"
 [ -n "${STUB_READ_STDIN:-}" ] && cat > /dev/null
@@ -25,8 +33,8 @@ esac
 case " ${STUB_FAIL:-} " in *" $KAS_MACHINE "*) echo "stub failure" >&2; exit 1;; esac
 STUB
     chmod +x "$T/bin/kas"
-    export STUB_CALLS="$T/kas.calls" STUB_ENV="$T/kas.env"; : > "$STUB_CALLS"; : > "$STUB_ENV"
-    unset STUB_FAIL STUB_FAIL_TEST
+    export STUB_CALLS="$T/kas.calls" STUB_ENV="$T/kas.env" STUB_DUMPS="$T/kas.dumps"; : > "$STUB_CALLS"; : > "$STUB_ENV"; : > "$STUB_DUMPS"
+    unset STUB_FAIL STUB_FAIL_TEST STUB_FAIL_DUMP
     export PATH="$T/bin:$ORIG_PATH"
 }
 ORIG_PATH="$PATH"
@@ -148,6 +156,45 @@ test_parallelism_defaults_to_cpu_count() {
     expect "parallelism: unset in local.env defaults to the CPU count" [ "$(cat "$STUB_ENV")" = "m2 threads=$n make=-j$n" ]
 }
 
+manifest_of() { echo "$T/work/fake/build/tmp/deploy/images/$1/build-manifest.json"; }
+manifest_field() { python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); print(eval(sys.argv[2]))' "$(manifest_of "$1")" "$2"; }
+
+test_manifest_written_per_machine() {
+    setup; run fake
+    expect "manifest: one per successful machine, next to its images" \
+        bash -c "[ -f '$(manifest_of m1)' ] && [ -f '$(manifest_of m2)' ] && [ -f '$(manifest_of m3)' ]"
+    expect "manifest: records release, machine and image" \
+        [ "$(manifest_field m1 '" ".join((d["branch"], d["machine"], d["image"]))')" = "fake m1 stub-image" ]
+    expect "manifest: each layer has its revision and upstream" \
+        [ "$(manifest_field m1 'd["layers"]["poky"]')" = "{'revision': 'c1', 'upstream': 'br'}" ]
+    expect "manifest: a repo without a branch uses its revision as upstream" \
+        [ "$(manifest_field m1 'd["layers"]["this"]["upstream"]')" = "c0" ]
+    expect "manifest: a repo without a resolved revision is left out" \
+        [ "$(manifest_field m1 '"unpinned" in d["layers"]')" = "False" ]
+    expect "manifest: resolves refs for the same config that was built" \
+        grep -qx "m1 dump --resolve-refs --resolve-local --format json kas/fake.yml:kas/overlays/ov.yml" "$STUB_DUMPS"
+}
+
+test_manifest_only_after_successful_build() {
+    setup; STUB_FAIL="m1" run fake
+    expect "manifest: none for a failed build" [ ! -e "$(manifest_of m1)" ]
+    expect "manifest: failed build does not resolve refs" bash -c '! grep -q "^m1 " "$STUB_DUMPS"'
+    expect "manifest: other machines still get one" [ -f "$(manifest_of m2)" ]
+}
+
+test_manifest_failure_reported() {
+    setup; STUB_FAIL_DUMP="m1" run fake
+    expect "manifest: dump failure exits 1" [ "$RC" -eq 1 ]
+    expect "manifest: summary says manifest failure with its log" grep -qE '^FAIL +m1 +manifest .*/m1\.log' <<<"$OUT"
+    expect "manifest: no record written for that machine" [ ! -e "$(manifest_of m1)" ]
+    expect "manifest: remaining targets still built" [ -f "$(manifest_of m2)" ]
+}
+
+test_manifest_written_even_if_boot_test_fails() {
+    qemu_setup; STUB_FAIL_TEST="qemua" run fake
+    expect "manifest: kept when only the boot test fails" [ -f "$(manifest_of qemua)" ]
+}
+
 test_default_builds_all_targets
 test_named_targets_only
 test_failure_continues_and_exits_nonzero
@@ -161,6 +208,10 @@ test_boot_failure_distinct
 test_kas_reading_stdin_does_not_eat_targets
 test_parallelism_cap_from_local_env
 test_parallelism_defaults_to_cpu_count
+test_manifest_written_per_machine
+test_manifest_only_after_successful_build
+test_manifest_failure_reported
+test_manifest_written_even_if_boot_test_fails
 
 echo "$pass passed, $fail failed"
 [ "$fail" -eq 0 ]
