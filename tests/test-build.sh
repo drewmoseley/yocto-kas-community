@@ -195,6 +195,20 @@ test_manifest_written_even_if_boot_test_fails() {
     expect "manifest: kept when only the boot test fails" [ -f "$(manifest_of qemua)" ]
 }
 
+test_update_flag() {
+    setup; run --update fake m1 m2
+    expect "update: --update is passed to kas build for every target" calls_equal \
+"m1 build --update kas/fake.yml:kas/overlays/ov.yml
+m2 build --update kas/fake.yml"
+    expect "update: --update still lets the release and targets be read" [ "$RC" -eq 0 ]
+    qemu_setup; run --update fake qemua
+    expect "update: the boot-test step does not update again" calls_equal \
+"qemua build --update kas/fake.yml:kas/testimage.yml
+qemua build --task testimage kas/fake.yml:kas/testimage.yml"
+    setup; run --update
+    expect "update: --update without a release exits 2" [ "$RC" -eq 2 ]
+}
+
 test_default_builds_all_targets
 test_named_targets_only
 test_failure_continues_and_exits_nonzero
@@ -212,6 +226,7 @@ test_manifest_written_per_machine
 test_manifest_only_after_successful_build
 test_manifest_failure_reported
 test_manifest_written_even_if_boot_test_fails
+test_update_flag
 
 echo "$pass passed, $fail failed"
 [ "$fail" -eq 0 ]

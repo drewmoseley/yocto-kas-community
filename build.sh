@@ -1,12 +1,15 @@
 #!/bin/bash
-# Build targets for a release with kas.  Usage: build.sh <release> [target...]
+# Build targets for a release with kas.  Usage: build.sh [--update] <release> [target...]
+# --update makes kas fetch new upstream commits for the floating refs before building.
 set -u
 here="$(cd "$(dirname "$0")" && pwd)"
 cd "$here"
 
 die() { echo "build.sh: $*" >&2; exit 2; }
 
-[ $# -ge 1 ] || die "usage: build.sh <release> [target...]"
+update=()
+if [ "${1:-}" = "--update" ]; then update=(--update); shift; fi
+[ $# -ge 1 ] || die "usage: build.sh [--update] <release> [target...]"
 release="$1"; shift
 [ -f "kas/$release.yml" ] || die "unknown release '$release' (no kas/$release.yml)"
 
@@ -40,7 +43,7 @@ while read -r machine overlay _ <&3; do
     log="$logdir/$machine.log"
     # The image under test must be built with the testimage overlay (login features).
     case "$machine" in qemu*) cfg="$cfg:kas/testimage.yml";; esac
-    KAS_MACHINE="$machine" kas build "$cfg" 2>&1 | tee "$log"
+    KAS_MACHINE="$machine" kas build "${update[@]}" "$cfg" 2>&1 | tee "$log"
     if [ "${PIPESTATUS[0]}" -ne 0 ]; then
         failed=1
         summary+="FAIL  $machine  build  $log"$'\n'

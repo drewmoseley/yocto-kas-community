@@ -65,13 +65,14 @@ variables is missing.
 ## Build
 
 ```sh
-./build.sh <release> [target...]
+./build.sh [--update] <release> [target...]
 ```
 
 ```sh
 ./build.sh wrynose                           # every target in all-targets.txt
 ./build.sh wrynose qemux86-64                # one target
 ./build.sh wrynose beagleplay raspberrypi4-64
+./build.sh --update wrynose               # first move the checkouts to the current branch tips
 ```
 
 Targets are built in the order they appear in `all-targets.txt`, whatever order you name
@@ -172,17 +173,17 @@ committing one by accident would pin every later run. To commit one on purpose, 
 ## Updating the checkouts
 
 kas reuses an existing checkout as it is and fetches new upstream commits only when asked
-with `--update`. `build.sh` does not pass it, so a work directory stays at the commits it
-first cloned, even though the kas files name branches. To move a work directory to the
-current branch tips, run kas yourself for that target's configuration:
+with `--update`. Without it, a work directory stays at the commits it first cloned, even
+though the kas files name branches. Pass `--update` to `build.sh` to move the checkouts to
+the current branch tips as part of the build:
 
 ```sh
-set -a; . ./local.env; set +a
-KAS_WORK_DIR="$WORK_ROOT/wrynose" kas checkout --update \
-    kas/wrynose.yml:kas/overlays/ti.yml
+./build.sh --update wrynose
 ```
 
-Repeat for each overlay you use, then build as usual.
+The flag goes to the `kas build` step of every target, not to the boot test. Targets that
+share layers fetch them again, so if upstream pushes during a long run, later targets can
+build newer commits than earlier ones. The build record of each target shows which.
 
 ## Tests
 
