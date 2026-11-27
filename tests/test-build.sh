@@ -21,7 +21,7 @@ if [ "$1" = dump ]; then
     echo '{"target":"stub-image","repos":{"this":{"url":"u","commit":"c0"},"poky":{"url":"p","branch":"br","commit":"c1"},"unpinned":{"url":"q"}}}'
     exit 0
 fi
-mkdir -p "$KAS_WORK_DIR/build/tmp/deploy/images/$KAS_MACHINE"
+[ -n "${STUB_NO_IMAGES:-}" ] || mkdir -p "$KAS_WORK_DIR/build/tmp/deploy/images/$KAS_MACHINE"
 echo "$KAS_MACHINE $*" >> "$STUB_CALLS"
 echo "$KAS_MACHINE threads=${BB_NUMBER_THREADS:-} make=${PARALLEL_MAKE:-}" >> "$STUB_ENV"
 [ -n "${STUB_READ_STDIN:-}" ] && cat > /dev/null
@@ -34,7 +34,7 @@ case " ${STUB_FAIL:-} " in *" $KAS_MACHINE "*) echo "stub failure" >&2; exit 1;;
 STUB
     chmod +x "$T/bin/kas"
     export STUB_CALLS="$T/kas.calls" STUB_ENV="$T/kas.env" STUB_DUMPS="$T/kas.dumps"; : > "$STUB_CALLS"; : > "$STUB_ENV"; : > "$STUB_DUMPS"
-    unset STUB_FAIL STUB_FAIL_TEST STUB_FAIL_DUMP
+    unset STUB_FAIL STUB_FAIL_TEST STUB_FAIL_DUMP STUB_NO_IMAGES
     export PATH="$T/bin:$ORIG_PATH"
 }
 ORIG_PATH="$PATH"
@@ -195,6 +195,13 @@ test_manifest_written_even_if_boot_test_fails() {
     expect "manifest: kept when only the boot test fails" [ -f "$(manifest_of qemua)" ]
 }
 
+test_missing_images_reported() {
+    setup; STUB_NO_IMAGES=1 run fake m1
+    expect "no-images: exits 1" [ "$RC" -eq 1 ]
+    expect "no-images: summary names it with the log" grep -qE '^FAIL +m1 +no-images .*/m1\.log' <<<"$OUT"
+    expect "no-images: not reported as a manifest failure" bash -c '! grep -q "manifest" <<<"$1"' _ "$OUT"
+}
+
 test_update_flag() {
     setup; run --update fake m1 m2
     expect "update: --update is passed to kas build for every target" calls_equal \
@@ -227,6 +234,7 @@ test_manifest_only_after_successful_build
 test_manifest_failure_reported
 test_manifest_written_even_if_boot_test_fails
 test_update_flag
+test_missing_images_reported
 
 echo "$pass passed, $fail failed"
 [ "$fail" -eq 0 ]

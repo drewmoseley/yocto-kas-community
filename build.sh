@@ -49,6 +49,13 @@ while read -r machine overlay _ <&3; do
         summary+="FAIL  $machine  build  $log"$'\n'
         continue
     fi
+    # A build can succeed without writing images if tmp/deploy/images/<machine> was removed
+    # after an earlier run, because BitBake's stamps then say the image tasks are done.
+    if [ ! -d "$KAS_WORK_DIR/build/tmp/deploy/images/$machine" ]; then
+        failed=1
+        summary+="FAIL  $machine  no-images  $log"$'\n'
+        continue
+    fi
     # Record the exact layer revisions next to this machine's images.
     manifest="$KAS_WORK_DIR/build/tmp/deploy/images/$machine/build-manifest.json"
     dump="$(mktemp)"
