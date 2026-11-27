@@ -21,7 +21,12 @@ if [ "$1" = dump ]; then
     echo '{"target":"stub-image","repos":{"this":{"url":"u","commit":"c0"},"poky":{"url":"p","branch":"br","commit":"c1"},"unpinned":{"url":"q"}}}'
     exit 0
 fi
-[ -n "${STUB_NO_IMAGES:-}" ] || mkdir -p "$KAS_WORK_DIR/build/tmp/deploy/images/$KAS_MACHINE"
+if [ "$1" = shell ]; then
+    echo "stub shell noise" >&2
+    echo "$KAS_WORK_DIR/build/${STUB_DEPLOY_SUBDIR:-tmp/deploy/images}/$KAS_MACHINE"
+    exit 0
+fi
+[ -n "${STUB_NO_IMAGES:-}" ] || mkdir -p "$KAS_WORK_DIR/build/${STUB_DEPLOY_SUBDIR:-tmp/deploy/images}/$KAS_MACHINE"
 echo "$KAS_MACHINE $*" >> "$STUB_CALLS"
 echo "$KAS_MACHINE threads=${BB_NUMBER_THREADS:-} make=${PARALLEL_MAKE:-}" >> "$STUB_ENV"
 [ -n "${STUB_READ_STDIN:-}" ] && cat > /dev/null
@@ -34,7 +39,7 @@ case " ${STUB_FAIL:-} " in *" $KAS_MACHINE "*) echo "stub failure" >&2; exit 1;;
 STUB
     chmod +x "$T/bin/kas"
     export STUB_CALLS="$T/kas.calls" STUB_ENV="$T/kas.env" STUB_DUMPS="$T/kas.dumps"; : > "$STUB_CALLS"; : > "$STUB_ENV"; : > "$STUB_DUMPS"
-    unset STUB_FAIL STUB_FAIL_TEST STUB_FAIL_DUMP STUB_NO_IMAGES
+    unset STUB_FAIL STUB_FAIL_TEST STUB_FAIL_DUMP STUB_NO_IMAGES STUB_DEPLOY_SUBDIR
     export PATH="$T/bin:$ORIG_PATH"
 }
 ORIG_PATH="$PATH"
@@ -202,6 +207,12 @@ test_missing_images_reported() {
     expect "no-images: not reported as a manifest failure" bash -c '! grep -q "manifest" <<<"$1"' _ "$OUT"
 }
 
+test_manifest_follows_relocated_deploy_dir() {
+    setup; STUB_DEPLOY_SUBDIR="deploy-ti/images" run fake m1
+    expect "deploy dir: relocated images dir is accepted" [ "$RC" -eq 0 ]
+    expect "deploy dir: manifest written beside the relocated images" [ -f "$T/work/fake/build/deploy-ti/images/m1/build-manifest.json" ]
+}
+
 test_update_flag() {
     setup; run --update fake m1 m2
     expect "update: --update is passed to kas build for every target" calls_equal \
@@ -235,6 +246,7 @@ test_manifest_failure_reported
 test_manifest_written_even_if_boot_test_fails
 test_update_flag
 test_missing_images_reported
+test_manifest_follows_relocated_deploy_dir
 
 echo "$pass passed, $fail failed"
 [ "$fail" -eq 0 ]

@@ -49,15 +49,17 @@ while read -r machine overlay _ <&3; do
         summary+="FAIL  $machine  build  $log"$'\n'
         continue
     fi
-    # A build can succeed without writing images if tmp/deploy/images/<machine> was removed
-    # after an earlier run, because BitBake's stamps then say the image tasks are done.
-    if [ ! -d "$KAS_WORK_DIR/build/tmp/deploy/images/$machine" ]; then
+    # Ask BitBake where this machine's images go: meta-ti, for one, moves them out of tmp/deploy.
+    # A build can also succeed without writing images if that directory was removed after an
+    # earlier run, because BitBake's stamps then say the image tasks are done.
+    deploy="$(KAS_MACHINE="$machine" kas shell "$cfg" -c 'bitbake-getvar --value DEPLOY_DIR_IMAGE' 2>>"$log" | tail -n 1)"
+    if [ -z "$deploy" ] || [ ! -d "$deploy" ]; then
         failed=1
         summary+="FAIL  $machine  no-images  $log"$'\n'
         continue
     fi
     # Record the exact layer revisions next to this machine's images.
-    manifest="$KAS_WORK_DIR/build/tmp/deploy/images/$machine/build-manifest.json"
+    manifest="$deploy/build-manifest.json"
     dump="$(mktemp)"
     if ! KAS_MACHINE="$machine" kas dump --resolve-refs --resolve-local --format json "$cfg" >"$dump" 2>>"$log" \
         || ! python3 "$here/scripts/build-manifest.py" "$release" "$machine" "$manifest" <"$dump" >>"$log" 2>&1; then
